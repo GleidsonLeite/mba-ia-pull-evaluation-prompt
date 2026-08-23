@@ -20,7 +20,8 @@ Configure o provider no arquivo .env através da variável LLM_PROVIDER.
 import os
 import sys
 import json
-from typing import List, Dict, Any
+import time
+from typing import Callable, List, Dict, Any
 from pathlib import Path
 from dotenv import load_dotenv
 from langsmith import Client
@@ -30,6 +31,44 @@ from utils import check_env_vars, format_score, print_section_header, get_llm as
 from metrics import evaluate_f1_score, evaluate_clarity, evaluate_precision
 
 load_dotenv()
+
+EXPECTED_EXAMPLE_COUNT = 15
+
+
+class EvaluationIncompleteError(RuntimeError):
+    """Indica que uma execução não possui resultados completos e comparáveis."""
+
+
+def invoke_with_retry(
+    operation: Callable[[], Dict[str, Any]],
+    operation_name: str,
+    max_attempts: int = 4,
+    base_delay: float = 1.0,
+) -> Dict[str, Any]:
+    """Executa uma chamada status-aware com backoff exponencial limitado."""
+    last_error = "falha desconhecida"
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = operation()
+            if result.get("status") == "ok":
+                return result
+            last_error = result.get("error", "resultado inválido")
+        except Exception as error:
+            last_error = str(error)
+
+        if attempt < max_attempts:
+            delay = min(base_delay * (2 ** (attempt - 1)), 30.0)
+            print(
+                f"      ⚠️  {operation_name} falhou "
+                f"(tentativa {attempt}/{max_attempts}): {last_error}. "
+                f"Nova tentativa em {delay:.1f}s."
+            )
+            time.sleep(delay)
+
+    raise EvaluationIncompleteError(
+        f"{operation_name} incompleta após {max_attempts} tentativas: {last_error}"
+    )
 
 
 def get_llm():
@@ -162,6 +201,7 @@ def evaluate_prompt_on_example(
             question = "N/A"
 
         return {
+            "status": "ok",
             "answer": answer,
             "reference": reference,
             "question": question
@@ -172,9 +212,11 @@ def evaluate_prompt_on_example(
         import traceback
         print(f"      Traceback: {traceback.format_exc()}")
         return {
-            "answer": "",
-            "reference": "",
-            "question": ""
+            "status": "error",
+            "answer": None,
+            "reference": None,
+            "question": None,
+            "error": str(e),
         }
 
 
@@ -184,59 +226,77 @@ def evaluate_prompt(
     client: Client
 ) -> Dict[str, float]:
     print(f"\n🔍 Avaliando: {prompt_name}")
+    prompt_template = pull_prompt_from_langsmith(prompt_name)
 
-    try:
-        prompt_template = pull_prompt_from_langsmith(prompt_name)
+    examples = list(client.list_examples(dataset_name=dataset_name))
+    print(f"   Dataset: {len(examples)} exemplos")
+    if len(examples) != EXPECTED_EXAMPLE_COUNT:
+        raise EvaluationIncompleteError(
+            f"dataset incompleto: esperados {EXPECTED_EXAMPLE_COUNT} exemplos, "
+            f"recebidos {len(examples)}"
+        )
 
-        examples = list(client.list_examples(dataset_name=dataset_name))
-        print(f"   Dataset: {len(examples)} exemplos")
+    llm = get_llm()
+    max_attempts = int(os.getenv("EVALUATION_MAX_ATTEMPTS", "4"))
+    f1_scores = []
+    clarity_scores = []
+    precision_scores = []
 
-        llm = get_llm()
+    print("   Avaliando exemplos...")
 
-        f1_scores = []
-        clarity_scores = []
-        precision_scores = []
+    for i, example in enumerate(examples, 1):
+        result = invoke_with_retry(
+            lambda: evaluate_prompt_on_example(prompt_template, example, llm),
+            operation_name=f"geração do exemplo {i}",
+            max_attempts=max_attempts,
+        )
 
-        print("   Avaliando exemplos...")
+        metric_args = (result["question"], result["answer"], result["reference"])
+        f1 = invoke_with_retry(
+            lambda: evaluate_f1_score(*metric_args),
+            operation_name=f"F1 do exemplo {i}",
+            max_attempts=max_attempts,
+        )
+        clarity = invoke_with_retry(
+            lambda: evaluate_clarity(*metric_args),
+            operation_name=f"clareza do exemplo {i}",
+            max_attempts=max_attempts,
+        )
+        precision = invoke_with_retry(
+            lambda: evaluate_precision(*metric_args),
+            operation_name=f"precisão do exemplo {i}",
+            max_attempts=max_attempts,
+        )
 
-        for i, example in enumerate(examples, 1):
-            result = evaluate_prompt_on_example(prompt_template, example, llm)
+        f1_scores.append(f1["score"])
+        clarity_scores.append(clarity["score"])
+        precision_scores.append(precision["score"])
 
-            if result["answer"]:
-                f1 = evaluate_f1_score(result["question"], result["answer"], result["reference"])
-                clarity = evaluate_clarity(result["question"], result["answer"], result["reference"])
-                precision = evaluate_precision(result["question"], result["answer"], result["reference"])
+        print(
+            f"      [{i}/{len(examples)}] F1:{f1['score']:.2f} "
+            f"Clarity:{clarity['score']:.2f} Precision:{precision['score']:.2f}"
+        )
 
-                f1_scores.append(f1["score"])
-                clarity_scores.append(clarity["score"])
-                precision_scores.append(precision["score"])
+    if not all(
+        len(scores) == EXPECTED_EXAMPLE_COUNT
+        for scores in (f1_scores, clarity_scores, precision_scores)
+    ):
+        raise EvaluationIncompleteError("nem todas as métricas foram calculadas")
 
-                print(f"      [{i}/{len(examples)}] F1:{f1['score']:.2f} Clarity:{clarity['score']:.2f} Precision:{precision['score']:.2f}")
+    avg_f1 = sum(f1_scores) / len(f1_scores)
+    avg_clarity = sum(clarity_scores) / len(clarity_scores)
+    avg_precision = sum(precision_scores) / len(precision_scores)
 
-        avg_f1 = sum(f1_scores) / len(f1_scores) if f1_scores else 0.0
-        avg_clarity = sum(clarity_scores) / len(clarity_scores) if clarity_scores else 0.0
-        avg_precision = sum(precision_scores) / len(precision_scores) if precision_scores else 0.0
+    avg_helpfulness = (avg_clarity + avg_precision) / 2
+    avg_correctness = (avg_f1 + avg_precision) / 2
 
-        avg_helpfulness = (avg_clarity + avg_precision) / 2
-        avg_correctness = (avg_f1 + avg_precision) / 2
-
-        return {
-            "helpfulness": round(avg_helpfulness, 4),
-            "correctness": round(avg_correctness, 4),
-            "f1_score": round(avg_f1, 4),
-            "clarity": round(avg_clarity, 4),
-            "precision": round(avg_precision, 4)
-        }
-
-    except Exception as e:
-        print(f"   ❌ Erro na avaliação: {e}")
-        return {
-            "helpfulness": 0.0,
-            "correctness": 0.0,
-            "f1_score": 0.0,
-            "clarity": 0.0,
-            "precision": 0.0
-        }
+    return {
+        "helpfulness": round(avg_helpfulness, 4),
+        "correctness": round(avg_correctness, 4),
+        "f1_score": round(avg_f1, 4),
+        "clarity": round(avg_clarity, 4),
+        "precision": round(avg_precision, 4)
+    }
 
 
 def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
@@ -272,6 +332,20 @@ def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
         print(f"⚠️  Média atual: {average_score:.4f} | Necessário: 0.8000")
 
     return passed
+
+
+def incomplete_evaluation_result(
+    prompt_name: str,
+    error: Exception,
+) -> Dict[str, Any]:
+    """Cria um resumo sem notas para execuções que não podem ser comparadas."""
+    return {
+        "prompt": prompt_name,
+        "scores": None,
+        "passed": False,
+        "status": "incomplete",
+        "error": str(error),
+    }
 
 
 def main():
@@ -314,15 +388,19 @@ def main():
     print("Certifique-se de ter feito push dos prompts antes de avaliar:")
     print("  python src/push_prompts.py\n")
 
-    username = os.getenv("USERNAME_LANGSMITH_HUB", "")
-    if not username:
-        print("❌ USERNAME_LANGSMITH_HUB não configurada no .env")
-        print("   Configure seu username do LangSmith Hub antes de continuar.")
-        return 1
+    # Build prompt name based on USERNAME_LANGSMITH_HUB if available
+    username = os.getenv("USERNAME_LANGSMITH_HUB", "").strip()
 
-    prompts_to_evaluate = [
-        f"{username}/bug_to_user_story_v2",
-    ]
+    # Determine which version to evaluate (v2 or v3)
+    version_to_eval = os.getenv("PROMPT_VERSION", "v2").strip()
+
+    if username:
+        prompt_name_to_eval = f"{username}/bug_to_user_story_{version_to_eval}"
+    else:
+        # If no username, use the default personal workspace format
+        prompt_name_to_eval = f"bug_to_user_story_{version_to_eval}"
+
+    prompts_to_evaluate = [prompt_name_to_eval]
 
     all_passed = True
     evaluated_count = 0
@@ -340,24 +418,15 @@ def main():
             results_summary.append({
                 "prompt": prompt_name,
                 "scores": scores,
-                "passed": passed
+                "passed": passed,
+                "status": "complete",
             })
 
         except Exception as e:
-            print(f"\n❌ Falha ao avaliar '{prompt_name}': {e}")
+            print(f"\n❌ Avaliação incompleta para '{prompt_name}': {e}")
+            print("   Nenhuma nota foi calculada para esta execução.")
             all_passed = False
-
-            results_summary.append({
-                "prompt": prompt_name,
-                "scores": {
-                    "helpfulness": 0.0,
-                    "correctness": 0.0,
-                    "f1_score": 0.0,
-                    "clarity": 0.0,
-                    "precision": 0.0
-                },
-                "passed": False
-            })
+            results_summary.append(incomplete_evaluation_result(prompt_name, e))
 
     print("\n" + "=" * 50)
     print("RESUMO FINAL")

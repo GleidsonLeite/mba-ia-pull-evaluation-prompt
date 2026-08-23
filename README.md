@@ -334,3 +334,119 @@ python src/evaluate.py
 - **Não altere os datasets de avaliação** - apenas os prompts em `prompts/bug_to_user_story_v2.yml`
 - **Itere, itere, itere** - é normal precisar de 3-5 iterações para atingir 0.8 em todas as métricas
 - **Documente seu processo** - a jornada de otimização é tão importante quanto o resultado final
+
+---
+
+## Implementação V2.1
+
+A V2.1 substitui o conteúdo da V2, mas mantém o identificador
+`bug_to_user_story_v2` e o mesmo nome versionado no LangSmith Hub. O objetivo é
+melhorar precisão, completude e clareza sem introduzir outro formato de saída.
+
+### Técnicas Aplicadas (Fase 2)
+
+1. **Role Prompting**: o modelo atua como Senior Product Manager responsável por
+   converter o relato em uma User Story utilizável por produto, desenvolvimento e
+   QA. O papel foi reduzido ao necessário para evitar instruções decorativas.
+2. **Few-shot Learning**: três pares de entrada e saída demonstram o mesmo formato
+   para um bug simples, um bug técnico e um relato com vários problemas. Os
+   exemplos também demonstram o que não deve ser inventado.
+3. **Chain of Thought interno**: uma verificação silenciosa confere cobertura,
+   rastreabilidade e formato antes da resposta. O raciocínio não é exibido; somente
+   a User Story final é retornada.
+4. **Restrições e delimitadores**: o relato é declarado como única fonte de verdade,
+   e o formato Markdown delimita exatamente a resposta esperada.
+
+### Decisões da V2.1
+
+- Há uma única estrutura: User Story seguida de Critérios de Aceitação em
+  Dado–Quando–Então. Relatos com vários problemas usam subtítulos dentro da mesma
+  seção, sem trocar o tipo de documento.
+- A quantidade de cenários é determinada pelos comportamentos relatados. Foram
+  removidas cotas como “3–5”, “5–7” e “7+”, que incentivavam preenchimento e
+  alucinações.
+- Números, endpoints, logs, ambientes, versões, passos e impactos devem ser
+  preservados. Persona e benefício podem usar apenas a derivação mínima exigida
+  pela User Story.
+- Mensagens, limites, telas, edge cases e soluções técnicas não informados não são
+  adicionados.
+- O fallback para entradas vazias ou insuficientes está integralmente em português.
+
+### Resultados e aprendizados
+
+Os resultados abaixo são o benchmark informado para as versões anteriores. A V3
+atingiu limites de requisição da OpenAI durante a avaliação; portanto, suas notas
+incluem falhas de infraestrutura e não representam uma comparação limpa.
+
+| Métrica | V2 | V3 | Variação observada |
+| --- | ---: | ---: | ---: |
+| Helpfulness | 0.76 | 0.73 | -0.03 |
+| Correctness | 0.69 | 0.67 | -0.02 |
+| F1-Score | 0.63 | 0.65 | +0.02 |
+| Clarity | 0.78 | 0.77 | -0.01 |
+| Precision | 0.74 | 0.68 | -0.06 |
+| **Média** | **0.7214** | **0.6995** | **-0.0219** |
+
+A V2.1 foi avaliada em uma execução completa, sem falhas de geração ou de
+avaliação:
+
+| Métrica | V2 | V2.1 | Variação |
+| --- | ---: | ---: | ---: |
+| Helpfulness | 0.76 | 0.76 | 0.00 |
+| Correctness | 0.69 | 0.69 | 0.00 |
+| F1-Score | 0.63 | 0.65 | +0.02 |
+| Clarity | 0.78 | 0.79 | +0.01 |
+| Precision | 0.74 | 0.74 | 0.00 |
+| **Média** | **0.7214** | **0.7271** | **+0.0057** |
+
+O ganho foi pequeno e a V2.1 ainda não atingiu o critério mínimo de `0.80`.
+Esse resultado não deve ser apresentado como aprovado; ele confirma apenas uma
+melhoria marginal em uma execução tecnicamente válida.
+
+Principais aprendizados:
+
+- O formato adaptativo da V3 aumentou a variabilidade sem elevar a qualidade.
+- O exemplo complexo da V3 contradizia a regra de fidelidade ao acrescentar fatos,
+  limites e soluções ausentes da entrada.
+- Repetição de instruções e cotas de critérios não garantem completude; cenários
+  ligados a fatos explícitos produzem uma resposta mais precisa.
+- Falhas do provedor não podem ser convertidas em nota zero nem removidas
+  silenciosamente da média.
+
+A meta permanece: todas as cinco métricas e a média geral devem ser maiores ou
+iguais a `0.80`.
+
+### Avaliação confiável
+
+Cada geração e cada métrica base retorna um status explícito. Falhas transitórias
+são repetidas com backoff exponencial, usando quatro tentativas por padrão. Se uma
+geração ou métrica continuar falhando, a execução é marcada como incompleta, não
+calcula médias e termina com código diferente de zero.
+
+As variáveis relevantes são:
+
+```dotenv
+PROMPT_VERSION=v2
+EVALUATION_MAX_ATTEMPTS=4
+```
+
+### Como executar a V2.1
+
+```bash
+# 1. Ativar o ambiente virtual e instalar dependências
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Validar o prompt e a confiabilidade do avaliador
+pytest -q
+
+# 3. Publicar a V2.1 no identificador V2 do LangSmith Hub
+python src/push_prompts.py
+
+# 4. Avaliar os 15 exemplos
+PROMPT_VERSION=v2 python src/evaluate.py
+```
+
+Uma execução só é válida quando apresenta resultados para os 15 exemplos e para
+F1-Score, Clarity e Precision em cada exemplo. Helpfulness e Correctness são
+derivadas apenas depois dessa validação.

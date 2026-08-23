@@ -24,7 +24,7 @@ Configure o provider no arquivo .env através da variável LLM_PROVIDER.
 import os
 import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from langchain_core.messages import SystemMessage, HumanMessage
 from utils import get_eval_llm
@@ -40,7 +40,7 @@ def get_evaluator_llm():
     return get_eval_llm(temperature=0)
 
 
-def extract_json_from_response(response_text: str) -> Dict[str, Any]:
+def extract_json_from_response(response_text: str) -> Optional[Dict[str, Any]]:
     """
     Extrai JSON de uma resposta de LLM que pode conter texto adicional.
     """
@@ -59,9 +59,24 @@ def extract_json_from_response(response_text: str) -> Dict[str, Any]:
             except json.JSONDecodeError:
                 pass
 
-        # Se não conseguir extrair, retornar valores default
+        # Falha de parsing é falha de infraestrutura, não nota de qualidade.
         print(f"⚠️  Não foi possível extrair JSON da resposta: {response_text[:200]}...")
-        return {"score": 0.0, "reasoning": "Erro ao processar resposta"}
+        return None
+
+
+def metric_success(score: float, **details: Any) -> Dict[str, Any]:
+    """Cria o contrato comum para uma métrica avaliada com sucesso."""
+    return {"status": "ok", "score": round(score, 4), **details}
+
+
+def metric_error(error: Exception | str, **details: Any) -> Dict[str, Any]:
+    """Representa falha de avaliação sem convertê-la em nota zero."""
+    return {
+        "status": "error",
+        "score": None,
+        "error": str(error),
+        **details,
+    }
 
 
 def evaluate_f1_score(question: str, answer: str, reference: str) -> Dict[str, Any]:
@@ -131,8 +146,13 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         response = llm.invoke([HumanMessage(content=evaluator_prompt)])
         result = extract_json_from_response(response.content)
 
-        precision = float(result.get("precision", 0.0))
-        recall = float(result.get("recall", 0.0))
+        if result is None:
+            raise ValueError("Resposta do avaliador não contém JSON válido")
+        if "precision" not in result or "recall" not in result:
+            raise ValueError("JSON do avaliador não contém precision e recall")
+
+        precision = float(result["precision"])
+        recall = float(result["recall"])
 
         # Calcular F1-Score
         if (precision + recall) > 0:
@@ -140,21 +160,16 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         else:
             f1_score = 0.0
 
-        return {
-            "score": round(f1_score, 4),
-            "precision": round(precision, 4),
-            "recall": round(recall, 4),
-            "reasoning": result.get("reasoning", "")
-        }
+        return metric_success(
+            f1_score,
+            precision=round(precision, 4),
+            recall=round(recall, 4),
+            reasoning=result.get("reasoning", ""),
+        )
 
     except Exception as e:
         print(f"❌ Erro ao avaliar F1-Score: {e}")
-        return {
-            "score": 0.0,
-            "precision": 0.0,
-            "recall": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}"
-        }
+        return metric_error(e, precision=None, recall=None)
 
 
 def evaluate_clarity(question: str, answer: str, reference: str) -> Dict[str, Any]:
@@ -228,19 +243,18 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         response = llm.invoke([HumanMessage(content=evaluator_prompt)])
         result = extract_json_from_response(response.content)
 
-        score = float(result.get("score", 0.0))
+        if result is None:
+            raise ValueError("Resposta do avaliador não contém JSON válido")
+        if "score" not in result:
+            raise ValueError("JSON do avaliador não contém score")
 
-        return {
-            "score": round(score, 4),
-            "reasoning": result.get("reasoning", "")
-        }
+        score = float(result["score"])
+
+        return metric_success(score, reasoning=result.get("reasoning", ""))
 
     except Exception as e:
         print(f"❌ Erro ao avaliar Clarity: {e}")
-        return {
-            "score": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}"
-        }
+        return metric_error(e)
 
 
 def evaluate_precision(question: str, answer: str, reference: str) -> Dict[str, Any]:
@@ -315,19 +329,18 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         response = llm.invoke([HumanMessage(content=evaluator_prompt)])
         result = extract_json_from_response(response.content)
 
-        score = float(result.get("score", 0.0))
+        if result is None:
+            raise ValueError("Resposta do avaliador não contém JSON válido")
+        if "score" not in result:
+            raise ValueError("JSON do avaliador não contém score")
 
-        return {
-            "score": round(score, 4),
-            "reasoning": result.get("reasoning", "")
-        }
+        score = float(result["score"])
+
+        return metric_success(score, reasoning=result.get("reasoning", ""))
 
     except Exception as e:
         print(f"❌ Erro ao avaliar Precision: {e}")
-        return {
-            "score": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}"
-        }
+        return metric_error(e)
 
 
 def evaluate_tone_score(bug_report: str, user_story: str, reference: str) -> Dict[str, Any]:
@@ -400,19 +413,18 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         response = llm.invoke([HumanMessage(content=evaluator_prompt)])
         result = extract_json_from_response(response.content)
 
-        score = float(result.get("score", 0.0))
+        if result is None:
+            raise ValueError("Resposta do avaliador não contém JSON válido")
+        if "score" not in result:
+            raise ValueError("JSON do avaliador não contém score")
 
-        return {
-            "score": round(score, 4),
-            "reasoning": result.get("reasoning", "")
-        }
+        score = float(result["score"])
+
+        return metric_success(score, reasoning=result.get("reasoning", ""))
 
     except Exception as e:
         print(f"❌ Erro ao avaliar Tone Score: {e}")
-        return {
-            "score": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}"
-        }
+        return metric_error(e)
 
 
 def evaluate_acceptance_criteria_score(bug_report: str, user_story: str, reference: str) -> Dict[str, Any]:
@@ -488,19 +500,18 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         response = llm.invoke([HumanMessage(content=evaluator_prompt)])
         result = extract_json_from_response(response.content)
 
-        score = float(result.get("score", 0.0))
+        if result is None:
+            raise ValueError("Resposta do avaliador não contém JSON válido")
+        if "score" not in result:
+            raise ValueError("JSON do avaliador não contém score")
 
-        return {
-            "score": round(score, 4),
-            "reasoning": result.get("reasoning", "")
-        }
+        score = float(result["score"])
+
+        return metric_success(score, reasoning=result.get("reasoning", ""))
 
     except Exception as e:
         print(f"❌ Erro ao avaliar Acceptance Criteria Score: {e}")
-        return {
-            "score": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}"
-        }
+        return metric_error(e)
 
 
 def evaluate_user_story_format_score(bug_report: str, user_story: str, reference: str) -> Dict[str, Any]:
@@ -578,19 +589,18 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         response = llm.invoke([HumanMessage(content=evaluator_prompt)])
         result = extract_json_from_response(response.content)
 
-        score = float(result.get("score", 0.0))
+        if result is None:
+            raise ValueError("Resposta do avaliador não contém JSON válido")
+        if "score" not in result:
+            raise ValueError("JSON do avaliador não contém score")
 
-        return {
-            "score": round(score, 4),
-            "reasoning": result.get("reasoning", "")
-        }
+        score = float(result["score"])
+
+        return metric_success(score, reasoning=result.get("reasoning", ""))
 
     except Exception as e:
         print(f"❌ Erro ao avaliar User Story Format Score: {e}")
-        return {
-            "score": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}"
-        }
+        return metric_error(e)
 
 
 def evaluate_completeness_score(bug_report: str, user_story: str, reference: str) -> Dict[str, Any]:
@@ -678,19 +688,18 @@ NÃO adicione nenhum texto antes ou depois do JSON.
         response = llm.invoke([HumanMessage(content=evaluator_prompt)])
         result = extract_json_from_response(response.content)
 
-        score = float(result.get("score", 0.0))
+        if result is None:
+            raise ValueError("Resposta do avaliador não contém JSON válido")
+        if "score" not in result:
+            raise ValueError("JSON do avaliador não contém score")
 
-        return {
-            "score": round(score, 4),
-            "reasoning": result.get("reasoning", "")
-        }
+        score = float(result["score"])
+
+        return metric_success(score, reasoning=result.get("reasoning", ""))
 
     except Exception as e:
         print(f"❌ Erro ao avaliar Completeness Score: {e}")
-        return {
-            "score": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}"
-        }
+        return metric_error(e)
 
 
 # Exemplo de uso e testes
