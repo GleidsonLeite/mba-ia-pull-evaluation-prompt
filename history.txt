@@ -1,0 +1,1008 @@
+HISTÓRICO DE OTIMIZAÇÃO E AVALIAÇÃO — BUG TO USER STORY
+Atualizado em: 2026-08-25
+
+======================================================================
+1. COMO INTERPRETAR ESTE ARQUIVO
+======================================================================
+
+Tipos de evidência usados:
+
+- BENCHMARK INFORMADO: resultado fornecido pelo autor do projeto ou recuperado
+  da documentação anterior. Não foi reexecutado nesta etapa.
+- AVALIAÇÃO COMPLETA: 15 gerações e três julgamentos base por exemplo (F1,
+  Clarity e Precision), sem erro ou rate limit conhecido.
+- PREFLIGHT: somente as 15 gerações do gpt-4o-mini. Não produz métricas e não
+  pode ser apresentado como avaliação oficial.
+
+Configuração das rodadas recentes:
+
+- Modelo gerador: gpt-4o-mini, temperature=0.
+- Modelo avaliador: gpt-4o, temperature=0.
+- Dataset: 15 exemplos imutáveis.
+- Helpfulness = (Clarity + Precision) / 2.
+- Correctness = (F1 + Precision) / 2.
+- Aprovação: todas as cinco métricas e a média geral >= 0.80.
+
+Os valores 0.45/0.52/0.48/0.50/0.46 e 0.94/0.96/0.93/0.95/0.92 no início
+do README são exemplos ilustrativos do enunciado. Eles não são avaliações deste
+trabalho e foram excluídos das comparações abaixo.
+
+======================================================================
+2. BENCHMARK V2 ORIGINAL
+======================================================================
+
+Tipo: BENCHMARK INFORMADO
+Situação: melhor baseline anterior à V2.1; não reexecutado.
+
+Helpfulness : 0.76
+Correctness : 0.69
+F1-Score    : 0.63
+Clarity     : 0.78
+Precision   : 0.74
+Média       : 0.7214
+Status      : REPROVADO
+
+Leitura:
+
+- Clarity e Helpfulness eram os pontos relativamente mais fortes.
+- F1 era o principal gargalo.
+- Nenhuma métrica alcançou 0.80.
+
+======================================================================
+3. V3 ADAPTATIVA
+======================================================================
+
+Tipo: BENCHMARK INFORMADO, CONTAMINADO POR FALHA DE INFRAESTRUTURA
+Situação: a execução atingiu rate limits da OpenAI e incluiu notas 0.00.
+
+Helpfulness : 0.73
+Correctness : 0.67
+F1-Score    : 0.65
+Clarity     : 0.77
+Precision   : 0.68
+Média       : 0.6995
+Status      : REPROVADO; NÃO É UM BASELINE LIMPO
+
+Variação observada contra V2:
+
+Helpfulness : -0.03
+Correctness : -0.02
+F1-Score    : +0.02
+Clarity     : -0.01
+Precision   : -0.06
+Média       : -0.0219
+
+Aprendizado: selecionar contratos de saída diferentes aumentou a variabilidade e
+não produziu ganho global. O resultado não deve ser usado para conclusões causais
+fortes porque houve falha do provedor.
+
+======================================================================
+4. V2.1
+======================================================================
+
+Data documentada: 2026-08-23
+Tipo: AVALIAÇÃO COMPLETA
+Situação: 15 exemplos, sem falhas de geração ou julgamento documentadas.
+
+Helpfulness : 0.76
+Correctness : 0.69
+F1-Score    : 0.65
+Clarity     : 0.79
+Precision   : 0.74
+Média       : 0.7271
+Status      : REPROVADO
+
+Variação contra V2:
+
+Helpfulness :  0.00
+Correctness :  0.00
+F1-Score    : +0.02
+Clarity     : +0.01
+Precision   :  0.00
+Média       : +0.0057
+
+Aprendizado: estrutura estável, ausência de cotas e verificação silenciosa
+melhoraram marginalmente F1 e Clarity, mas não resolveram cobertura semântica.
+
+======================================================================
+5. V2.4 E V2.5
+======================================================================
+
+Essas versões foram revisadas durante a iteração, mas não existem resultados
+numéricos completos e verificáveis disponíveis no repositório ou no histórico
+recuperado. Nenhuma nota é inferida neste arquivo.
+
+O feedback externo posterior apontou que evaluate.py, metrics.py e utils.py haviam
+sido alterados fora do escopo do desafio. Por isso, qualquer alegação baseada no
+avaliador modificado deixou de ser considerada evidência válida. Os três arquivos
+foram restaurados exatamente de origin/main antes das rodadas V2.6.
+
+======================================================================
+6. V2.6 — TRÊS AVALIAÇÕES COMPLETAS
+======================================================================
+
+Todas as rodadas abaixo processaram 15 exemplos, sem rate limit ou erro conhecido.
+Os avaliadores, utilitários e dataset estavam idênticos a origin/main.
+
+Rodada 1
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/6ebdb5a2?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+
+Helpfulness : 0.84
+Correctness : 0.79
+F1-Score    : 0.77
+Clarity     : 0.86
+Precision   : 0.82
+Média       : 0.8163
+Status      : REPROVADO — Correctness e F1 abaixo de 0.80
+
+Rodada 2
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/9724f916?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+
+Helpfulness : 0.84
+Correctness : 0.79
+F1-Score    : 0.77
+Clarity     : 0.86
+Precision   : 0.81
+Média       : 0.8143
+Status      : REPROVADO — Correctness e F1 abaixo de 0.80
+
+Rodada 3
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/96a043c0?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+
+Helpfulness : 0.84
+Correctness : 0.79
+F1-Score    : 0.77
+Clarity     : 0.87
+Precision   : 0.81
+Média       : 0.8192
+Status      : REPROVADO — Correctness e F1 abaixo de 0.80
+
+Conclusão matemática:
+
+Correctness não era um gargalo independente. Com Precision=0.81 e F1=0.77:
+
+  Correctness = (0.77 + 0.81) / 2 = 0.79
+
+Elevar F1 para 0.80 mantendo Precision acima de 0.80 levaria Correctness para
+acima do limiar. Para tolerar variação do judge, a meta interna definida passou a
+ser F1 >= 0.82 e Precision >= 0.82.
+
+Resultados base por exemplo na terceira rodada
+Ordem: número original do dataset; F1 / Clarity / Precision.
+
+01. Carrinho simples             : 1.00 / 0.90 / 0.67
+02. Validação de email           : 1.00 / 0.95 / 1.00
+03. Layout iOS                   : 0.85 / 0.90 / 1.00
+04. Dashboard                    : 0.69 / 0.75 / 0.67
+05. Safari                       : 0.85 / 0.80 / 0.67
+06. Webhook                      : 0.80 / 0.80 / 0.67
+07. Performance                  : 0.55 / 0.85 / 0.67
+08. Autorização                  : 0.75 / 0.85 / 0.90
+09. Cálculo                      : 0.80 / 0.85 / 0.90
+10. Android                      : 0.75 / 0.90 / 0.80
+11. Estoque                      : 0.55 / 0.90 / 0.67
+12. Modal                        : 0.69 / 0.90 / 0.90
+13. Checkout complexo            : 0.87 / 0.90 / 0.90
+14. Relatórios complexos         : 0.75 / 0.90 / 0.90
+15. Sincronização offline        : 0.75 / 0.90 / 0.90
+
+Principais omissões observadas:
+
+- Performance: a referência esperava menos de 30 segundos, ausência de timeout e
+  consistência no pico; a geração reutilizou o limite defeituoso de 120 segundos.
+- Estoque: a ação principal deveria ser a tentativa de finalizar; faltaram partes
+  de feedback e recuperação.
+- Dashboard: números observados foram tratados como valor fixo e faltaram filtro
+  e atualização dinâmica.
+- Webhook: comunicação e auditoria foram omitidas.
+- Modal: foco, teclado, backdrop e fechamento foram omitidos.
+
+Aprendizado: adicionar uma lista extensa de categorias e soluções específicas não
+moveu o F1, que permaneceu em 0.77 nas três rodadas. A V2.6 cresceu para cerca de
+18 KB e passou a competir por atenção, além de se aproximar de overfitting.
+
+======================================================================
+7. V2.7 — SIMPLIFICAÇÃO E PREFLIGHTS
+======================================================================
+
+Arquitetura adotada:
+
+- um contrato fixo de User Story e critérios;
+- seções adicionais condicionadas às evidências;
+- quatro few-shots sintéticos;
+- separação entre fato, consequência necessária e recomendação;
+- política defensável: não copiar números ou tecnologias ausentes do relato.
+
+Nenhuma variante V2.7 abaixo passou pelo avaliador oficial. Não existem notas de
+F1, Clarity ou Precision para elas.
+
+-----------------------------------------------------------------------
+V2.7 — Preflight 1
+-----------------------------------------------------------------------
+
+Tipo: PREFLIGHT, 15/15 gerações, zero judges
+Commit curto: b6c83b3c
+Commit completo: b6c83b3c84222947627f3f25025021a081072c4c02992109e61e240e2bf5d8ec
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/b6c83b3c?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO
+
+Falhas:
+
+- Performance usou menos de 120 segundos como resultado esperado.
+- Estoque focou a mudança de estoque, não a tentativa de finalizar.
+- Webhook omitiu comunicação e rastreabilidade.
+- Modal omitiu acessibilidade básica.
+- Relatórios complexos inventaram metas como CPU abaixo de 80% e cache abaixo de
+  1 minuto.
+- Sincronização inventou metas de NPS e churn.
+
+-----------------------------------------------------------------------
+V2.7 — Preflight 2
+-----------------------------------------------------------------------
+
+Tipo: PREFLIGHT, 15/15 gerações, zero judges
+Commit curto: 4537865a
+Commit completo: 4537865a210b4cd82a1fe84d1506b125d018c04291c9dd5a3688b961b6cd3f0e
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/4537865a?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO
+
+Melhoria:
+
+- O cálculo derivou corretamente o subtotal de R$ 1.500.
+
+Falhas:
+
+- Performance ainda usou menos de 2 minutos e menos de 120 segundos como sucesso.
+- Estoque continuou usando uma etapa anterior como "Quando" e omitiu recuperação.
+- Webhook e modal repetiram as omissões anteriores.
+- Checkout complexo inventou taxa do gateway abaixo de 5% e rating >= 4.0.
+- Sincronização inventou NPS > 8.0 e churn < 5%.
+
+-----------------------------------------------------------------------
+V2.7 — Preflight 3
+-----------------------------------------------------------------------
+
+Tipo: PREFLIGHT, 15/15 gerações, zero judges
+Commit curto: a861214e
+Commit completo: a861214eea023635e4cc88eff3ce1f9a2c0a08a4da3f07814ca791ecf471607b
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/a861214e?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO
+
+Melhorias:
+
+- Nenhuma seção "Métricas de Sucesso" foi gerada.
+- Nenhuma meta numérica nova foi detectada.
+- O único número ausente do relato foi R$ 1.500, derivação aritmética correta no
+  exemplo de cálculo.
+
+Falhas:
+
+- Performance ainda colocou menos de 120 segundos no resultado esperado.
+- Estoque ainda usou "estoque fica zerado" como "Quando", não a tentativa de
+  finalizar.
+- Webhook ainda omitiu comunicação e rastreabilidade.
+- Modal ainda omitiu foco, teclado e fechamento acessível.
+
+Conclusão dos preflights:
+
+As negativas e checklists reduziram invenções, mas não mudaram quatro padrões de
+omissão. Acrescentar mais regras abstratas à mesma arquitetura tem baixa evidência
+de retorno. A próxima iteração deve mudar as demonstrações few-shot e a estratégia
+de preflight, não aumentar novamente a taxonomia.
+
+======================================================================
+8. V2.8 — MICRO-PREFLIGHT DIRIGIDO
+======================================================================
+
+Data: 2026-08-25
+Tipo: MICRO-PREFLIGHT, 7/7 gerações, zero judges
+Modelo gerador: gpt-4o-mini, temperature=0
+Commit curto: 4b873a81
+Commit completo: 4b873a81e6cb6eccbb1487c2dfe154b8fe444de1e104219826a25bcae2b94da4
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/4b873a81?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO; avaliação oficial não executada
+
+Casos executados:
+
+06. Webhook: REPROVADO
+    Preservou pedido, meio de pagamento, status, HTTP 500 e endpoint, mas voltou a
+    omitir comunicação do resultado e registro rastreável/auditoria.
+
+07. Performance: REPROVADO
+    Os critérios não fixaram o timeout como alvo, porém a própria User Story pediu
+    geração "em menos de 2 minutos". A duração defeituosa virou meta de sucesso.
+
+09. Cálculo: PARCIAL
+    Preservou preços, desconto e total esperado de R$ 1.350, mas não explicitou o
+    subtotal de R$ 1.500 nem o desconto derivado de R$ 150.
+
+11. Estoque: REPROVADO
+    O "Quando" continuou sendo "o estoque fica zerado". A tentativa de finalizar
+    permaneceu como efeito posterior, e não houve recuperação segura após o bloqueio.
+
+12. Modal: REPROVADO
+    Corrigiu visibilidade e clique, mas omitiu foco, teclado e fechamento acessível,
+    apesar desses comportamentos estarem demonstrados no quarto few-shot da V2.8.
+
+14. Relatórios complexos: REPROVADO
+    Cobriu os quatro temas, mas inventou a meta "CPU abaixo de 80%". O relato fornece
+    CPU atual de 95%, sem estabelecer 80% como resultado esperado.
+
+15. Sincronização complexa: PARCIAL
+    Cobriu os quatro temas principais sem nova meta numérica, mas condensou várias
+    evidências e promoveu escolhas técnicas, como merge, retomada e lotes, a critérios.
+
+Conclusão:
+
+- A troca dos few-shots não foi suficiente para transferir os quatro padrões críticos.
+- O gate impediu o avanço desnecessário para o preflight completo e para a rodada
+  oficial de 15 gerações e 45 julgamentos.
+- Não existem métricas oficiais de F1, Clarity ou Precision para a V2.8.
+
+======================================================================
+9. V2.9 — MICRO-PREFLIGHT DIRIGIDO
+======================================================================
+
+Data: 2026-08-25
+Tipo: MICRO-PREFLIGHT, 7/7 gerações, zero judges
+Modelo gerador: gpt-4o-mini, temperature=0
+Commit curto: 6e9e0fa9
+Commit completo: 6e9e0fa9a6d96cbb0998c2fe3e61396f9b0a25ca685f165d5cfbce074c9dd465
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/6e9e0fa9?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO; judges diagnósticos e avaliação oficial não executados
+
+Hipótese testada:
+
+- alinhar a operação da Story com a ação do "Quando";
+- autorizar uma allowlist curta de consequências derivadas;
+- demonstrar inferência real no quarto few-shot;
+- repetir uma auditoria compacta depois do relato para aumentar recência.
+
+Casos executados:
+
+06. Webhook: REPROVADO
+    Gerou duas User Stories. Atualizou o estado, mas omitiu a rastreabilidade do
+    evento e transformou a comunicação em aviso de erro para um operador.
+
+07. Performance: REPROVADO
+    Removeu o número defeituoso da Story, mas voltou a exigir duração inferior ao
+    timeout de 120 segundos nos critérios de aceitação.
+
+09. Cálculo: REPROVADO
+    Gerou duas User Stories equivalentes e ainda omitiu o subtotal de R$ 1.500 e o
+    desconto diretamente derivado de R$ 150.
+
+11. Estoque: REPROVADO
+    Gerou duas User Stories. Na primeira, o "Quando" permaneceu sendo o estoque
+    zerado; na segunda, passou a ser a tentativa do sistema de gerar o pedido, e não
+    a tentativa do cliente de finalizar. Também não ofereceu recuperação segura.
+
+12. Modal: REPROVADO
+    Gerou duas User Stories. Acrescentou gerenciamento de foco, mas ainda omitiu
+    operação por teclado e uma forma segura de fechamento.
+
+14. Relatórios complexos: REPROVADO
+    Gerou quatro User Stories, contrariando o contrato único, e voltou a inventar a
+    meta de CPU abaixo de 80% em dois cenários.
+
+15. Sincronização complexa: PARCIAL
+    Manteve uma única Story e cobriu os quatro temas sem meta numérica nova, mas
+    ainda promoveu escolhas como merge, retomada e processamento em lotes a critérios.
+
+Indicadores estruturais:
+
+- Quantidade de User Stories por caso: 2, 1, 2, 2, 2, 4 e 1.
+- Único número novo detectado: 80% no caso 14, repetido sem apoio no relato.
+- A instrução de cobrir problemas separadamente aumentou a decomposição indevida e
+  não melhorou a transferência das consequências autorizadas.
+- Não existem métricas de F1, Clarity ou Precision para a V2.9.
+
+======================================================================
+10. ESTADO ATUAL
+======================================================================
+
+- Prompt local: V2.9 correspondente ao commit 6e9e0fa9.
+- Prompt Hub: privado, pois a conta LangSmith ainda não possui handle público.
+- Testes locais mais recentes: 6 aprovados.
+- System prompt: 8.381 bytes.
+- Placeholders: somente {bug_report}.
+- Exemplos: quatro pares sintéticos Entrada/Saída.
+- evaluate.py, metrics.py, utils.py e dataset: idênticos a origin/main.
+- README: não foi atualizado com resultado final porque ainda não há rodada aprovada.
+- Melhor avaliação oficial válida: V2.6 rodada 3, média 0.8192, mas F1=0.77 e
+  Correctness=0.79.
+
+======================================================================
+11. PRÓXIMOS PASSOS RECOMENDADOS
+======================================================================
+
+1. Não executar os judges diagnósticos nem a avaliação oficial da V2.9. O gate já
+   comprovou regressão estrutural e repetição das falhas críticas.
+
+2. Antes de criar outra versão, revisar a hipótese de controle de formato. A V2.10
+   deve eliminar a ambiguidade entre "uma Story" e "cobrir separadamente", exigir
+   exatamente um bloco iniciado por "Como" e agrupar apenas os critérios por tema.
+
+3. Tratar a aplicação da allowlist como transformação obrigatória e próxima da
+   saída, sem copiar números, canais ou tecnologias exclusivas das referências.
+
+4. Reavaliar o gate caso a caso: separar violações factuais obrigatórias de itens
+   de referência desejáveis, pois inspeção manual não estima a nota do judge.
+
+5. Depois de uma nova variante passar o micro-preflight, executar F1 e Precision
+   somente nos sete casos como diagnóstico, mantendo os avaliadores oficiais intactos.
+
+6. Se o diagnóstico passar, publicar um commit imutável e executar o preflight
+   completo de 15 exemplos. Verificar automaticamente números ausentes do relato,
+   respostas vazias e cobertura de todos os problemas complexos.
+
+7. Somente após o preflight completo passar, executar uma avaliação oficial com
+   15 gerações e 45 julgamentos. Meta interna: F1 e Precision >= 0.82 e Clarity
+   >= 0.84; aprovação formal continua sendo todas as métricas >= 0.80.
+
+8. Se a avaliação oficial falhar, alterar somente o prompt V2 e usar os traces da
+   rodada para uma revisão dirigida. Não alterar avaliadores, utilitários ou dataset.
+
+9. Depois de uma rodada aprovada:
+   - criar o handle público do LangSmith;
+   - tornar o prompt e as evidências públicos;
+   - registrar no README as notas reais, modelos, commit do prompt, links do
+     Prompt Hub/LangSmith e evidência dos 15 exemplos;
+   - manter este arquivo como histórico completo, incluindo tentativas reprovadas.
+
+======================================================================
+12. LIMITAÇÕES CONHECIDAS
+======================================================================
+
+- O judge é semântico e pode variar mesmo com temperature=0.
+- Algumas referências esperam comportamentos, números ou soluções não sustentados
+  pelo relato. A política escolhida prioriza uma resposta defensável, mesmo quando
+  isso pode reduzir recall contra essas referências.
+- Os links do Prompt Hub acima são privados até a criação de um handle público.
+- Os arquivos JSONL dos preflights foram gerados em /tmp e não são evidência
+  permanente; os achados relevantes foram transcritos neste histórico.
+- Não é possível prometer que a próxima avaliação alcançará 0.80 em uma única rodada.
+
+======================================================================
+13. V2.10 — MICRO-PREFLIGHT DIRIGIDO
+======================================================================
+
+Data: 2026-08-25
+Tipo: MICRO-PREFLIGHT, 7/7 gerações, zero judges
+Modelo gerador: gpt-4o-mini, temperature=0
+Commit curto: cba26051
+Commit completo: cba26051425f1b94d70453512b7d812bbc87ac7d80715cd2e76f69167ee6b659
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/cba26051?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO; judges diagnósticos e avaliação oficial não executados
+
+Hipótese testada:
+
+- transformar a allowlist de consequências autorizadas de limite opcional em
+  cobertura obrigatória de todos os efeitos de cada categoria aplicável;
+- não criar outra User Story apenas para representar um efeito;
+- manter exemplos, contrato, categorias, números e tecnologias da V2.9.
+
+Integridade da rodada:
+
+- Sete respostas não vazias e nenhum erro de geração ou provider.
+- Quantidade de User Stories por caso: 2, 1, 1, 2, 2, 4 e 1.
+- Quatro casos violaram o contrato de uma Story: 06, 11, 12 e 14.
+
+Casos executados:
+
+06. Webhook: PARCIAL
+    Passou a produzir registro rastreável e resultado HTTP 200, mas ainda omitiu a
+    comunicação à parte afetada e dividiu o comportamento em duas Stories. O número
+    200 não consta no relato, embora corresponda ao sucesso esperado pela referência.
+
+07. Performance: REPROVADO
+    Voltou a transformar o timeout defeituoso em meta ao exigir duração inferior a
+    120 segundos. A regra de não reutilizar o timeout como objetivo não foi seguida.
+
+09. Cálculo: PARCIAL
+    Convergiu para uma única Story e derivou o subtotal de R$ 1.500, mas ainda não
+    explicitou o desconto intermediário de R$ 150.
+
+11. Estoque: REPROVADO
+    Manteve duas Stories, usou o estoque zerado como "Quando" e não aplicou
+    revalidação na confirmação, atomicidade nem recuperação segura após o bloqueio.
+
+12. Modal: REPROVADO
+    Manteve duas Stories e cobriu visibilidade e clique, mas omitiu gerenciamento de
+    foco, uso por teclado e fechamento seguro. Houve regressão de foco frente à V2.9.
+
+14. Relatórios complexos: REPROVADO
+    Manteve quatro Stories e voltou a inventar a meta de CPU abaixo de 80%, ausente
+    no relato, tanto para o dashboard quanto para a exportação.
+
+15. Sincronização complexa: PARCIAL
+    Manteve uma Story, cobriu os quatro temas e preservou os principais fatos, mas
+    ainda promoveu escolhas de merge, retomada e gerenciamento de memória a critérios
+    ou recomendações sem demonstrar melhora causada pela nova regra.
+
+Conclusão:
+
+- A mudança semântica isolada gerou ganhos locais em webhook e cálculo, mas não fez
+  o modelo aplicar integralmente a allowlist nos casos críticos de estoque e modal.
+- A hipótese de que tornar a allowlist obrigatória seria suficiente foi falsificada
+  pelo micro-preflight.
+- O gate bloqueou corretamente judges diagnósticos, preflight completo e avaliação
+  oficial. A próxima iteração deve ser decidida antes de qualquer nova chamada paga.
+
+Artefatos temporários:
+
+- /tmp/v210-micro-preflight-cba26051.jsonl
+- /tmp/v210-micro-preflight-cba26051-summary.json
+
+======================================================================
+14. V2.11 — MATRIZ SILENCIOSA DE COBERTURA
+======================================================================
+
+Data: 2026-08-25
+Tipo: MICRO-PREFLIGHT, 7/7 gerações, zero judges
+Modelo gerador: gpt-4o-mini, temperature=0
+Commit curto: c4f48d86
+Commit completo: c4f48d86d959c85185260e171bfac452edc296d030c093a267a8ae2e6bf87796
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/c4f48d86?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO; gate factual reprovado e judges não executados
+
+Hipótese testada:
+
+- substituir a análise e o checklist redundantes por uma matriz silenciosa no final
+  do user prompt;
+- rastrear operação, fatos, efeitos necessários, números permitidos e critérios;
+- impedir que problemas ou efeitos produzam novas User Stories.
+
+Integridade da rodada:
+
+- Sete respostas não vazias, com formato válido e nenhum erro de provider.
+- Todos os sete casos produziram exatamente uma User Story.
+- Os arquivos protegidos permaneceram idênticos a origin/main.
+
+Casos executados:
+
+06. Webhook: REPROVADO
+    Preservou uma Story, atualizou o estado e criou registro rastreável, mas não
+    comunicou a parte afetada.
+
+07. Performance: REPROVADO
+    Promoveu os dois valores defeituosos a metas: concluir antes do timeout de
+    120 segundos e em duração inferior a 2 minutos.
+
+09. Cálculo: REPROVADO
+    Preservou R$ 1.000, R$ 500, 10% e R$ 1.350, mas não explicitou o subtotal de
+    R$ 1.500 nem o desconto intermediário de R$ 150.
+
+11. Estoque: REPROVADO
+    Usou a tentativa de adicionar ao carrinho como "Quando", em vez da tentativa de
+    finalizar. Omitiu revalidação na confirmação, atomicidade e recuperação segura.
+
+12. Modal: REPROVADO
+    Cobriu camada e clique, mas omitiu gerenciamento de foco, teclado e fechamento
+    seguro.
+
+14. Relatórios complexos: REPROVADO
+    Unificou os quatro temas em uma Story, mas reutilizou 24 horas como janela de
+    validação do cache e 100% como limite de CPU, ambos provenientes da falha.
+
+15. Sincronização complexa: PARCIAL
+    Preservou uma Story e cobriu os quatro temas sem introduzir novas metas numéricas.
+
+Conclusão:
+
+- A matriz corrigiu completamente a multiplicidade estrutural observada na V2.10.
+- A representação silenciosa não controlou números defeituosos nem garantiu a
+  transferência dos efeitos autorizados e da aritmética intermediária.
+- A hipótese da V2.11 foi falsificada pelo gate. Os 21 judges diagnósticos não foram
+  executados, portanto não existem métricas F1, Clarity ou Precision desta rodada.
+
+Artefatos temporários:
+
+- /tmp/v211-micro-preflight-c4f48d86.jsonl
+- /tmp/v211-micro-preflight-c4f48d86-summary.json
+
+======================================================================
+15. V2.12 — FEW-SHOT CONTRASTIVO DE PROVENIÊNCIA NUMÉRICA
+======================================================================
+
+Data: 2026-08-25
+Tipo: MICRO-PREFLIGHT, 7/7 gerações, zero judges
+Modelo gerador: gpt-4o-mini, temperature=0
+Commit curto: e7517aa9
+Commit completo: e7517aa9a0aa553aa585b8393b63fe8e550924160dcae8f109f203bf96b6f0aa
+Prompt Hub: https://smith.langchain.com/prompts/bug_to_user_story_v2/e7517aa9?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: BLOQUEADO; gate numérico reprovado e judges não executados
+
+Hipótese testada:
+
+- transformar somente o Exemplo 3 em uma demonstração contrastiva;
+- mostrar a transformação incorreta de timeout observado em meta, explicar o erro
+  e apresentar a transformação correta sem meta numérica inventada;
+- preservar a entrada e a saída positiva completa do exemplo.
+
+Integridade da rodada:
+
+- Sete respostas não vazias, com formato válido e nenhum erro de provider.
+- Todos os sete casos produziram exatamente uma User Story.
+- O prompt foi puxado pelo commit publicado, não pelo alias mutável.
+- Os arquivos protegidos permaneceram idênticos a origin/main.
+
+Resultado do experimento causal:
+
+07. Performance: APROVADO NO GATE DIRECIONADO
+    Preservou a condição de mais de 1000 registros. Não transformou os 120 segundos
+    nem os 2 minutos em metas; exigiu ausência de timeout e melhora medida contra o
+    comportamento observado.
+
+14. Relatórios complexos: REPROVADO
+    Preservou corretamente os resultados esperados de menos de 3 segundos e 2GB.
+    Entretanto, continuou usando valores defeituosos nas linhas de resultado: CPU
+    abaixo de 95%, não esperar 24 horas e não consumir 100% de CPU por 5 minutos.
+
+Demais observações sem judges:
+
+- 06 continuou sem comunicação à parte afetada.
+- 09 continuou sem subtotal de R$ 1.500 e desconto intermediário de R$ 150.
+- 11 continuou usando a tentativa de adicionar como ação principal e omitiu a
+  validação na finalização, atomicidade e recuperação.
+- 12 continuou sem foco, teclado e fechamento seguro.
+- 15 manteve uma Story e os quatro temas principais.
+
+Conclusão:
+
+- O contraste transferiu para o caso simples de performance (#07), confirmando ganho
+  local sobre a V2.11.
+- O mesmo contraste não generalizou para o relato multifalha (#14), no qual valores
+  defeituosos continuaram sendo transformados em critérios negativos.
+- A hipótese global da V2.12 foi falsificada pelo gate. Nenhum judge foi executado;
+  portanto não existem métricas F1, Clarity ou Precision desta rodada.
+
+Artefatos temporários:
+
+- /tmp/v212-micro-preflight-e7517aa9.jsonl
+- /tmp/v212-micro-preflight-e7517aa9-summary.json
+
+======================================================================
+16. V2.12 — JULGAMENTOS DIAGNÓSTICOS DO MICRO-PREFLIGHT
+======================================================================
+
+Data: 2026-08-25
+Tipo: DIAGNÓSTICO PARCIAL, 7 gerações previamente fixadas e 21 julgamentos
+Modelo avaliador: gpt-4o, temperature=0
+Prompt fixado: e7517aa9a0aa553aa585b8393b63fe8e550924160dcae8f109f203bf96b6f0aa
+Status: COMPLETO COMO DIAGNÓSTICO; NÃO É AVALIAÇÃO OFICIAL DE 15 EXEMPLOS
+
+Integridade:
+
+- As sete respostas da V2.12 foram reutilizadas sem regeneração.
+- F1, Clarity e Precision foram executadas para cada resposta: 21/21.
+- Não houve erro de provider, parsing ou rate limit.
+- O prompt, o dataset e os avaliadores oficiais não foram alterados.
+
+Médias dos sete casos:
+
+V2.12:
+- F1       : 0.7192
+- Clarity  : 0.8143
+- Precision: 0.7771
+
+V2.9 nos mesmos casos:
+- F1       : 0.7146
+- Clarity  : 0.8214
+- Precision: 0.8014
+
+O modelo avaliador da V2.9 foi confirmado nos metadados de um trace como
+gpt-4o-2024-08-06, descartando confundimento de modelo na comparação pareada.
+
+Variação V2.12 contra V2.9:
+- F1       : +0.0046
+- Clarity  : -0.0071
+- Precision: -0.0243
+
+Resultados por caso
+Ordem: número do dataset; V2.12 F1 / Clarity / Precision; comparação F1 e
+Precision da V2.9 entre parênteses.
+
+06. Webhook       : 0.6857 / 0.80 / 0.67 (V2.9: 0.6462 / 0.67)
+07. Performance   : 0.7467 / 0.85 / 0.67 (V2.9: 0.6857 / 0.67)
+09. Cálculo       : 0.8471 / 0.80 / 0.83 (V2.9: 0.8471 / 0.90)
+11. Estoque       : 0.5455 / 0.80 / 0.67 (V2.9: 0.6462 / 0.80)
+12. Modal         : 0.6154 / 0.80 / 0.80 (V2.9: 0.5833 / 0.67)
+14. Relatórios    : 0.7467 / 0.75 / 0.90 (V2.9: 0.7467 / 1.00)
+15. Sincronização : 0.8471 / 0.90 / 0.90 (V2.9: 0.8471 / 0.90)
+
+Calibração pré-registrada do gate:
+
+- Validação exigia F1 >= 0.749 e ganho de pelo menos 0.03 contra a V2.9.
+- Refutação exigia F1 <= 0.7146 ou regressão de F1 nos casos 07 ou 09.
+- Nenhuma condição ocorreu. O resultado formal da calibração foi inconclusivo.
+
+Leitura:
+
+- O contraste numérico melhorou substancialmente o F1 do caso 07, mas não moveu
+  sua Precision, pois o judge exigiu a meta de menos de 30 segundos existente
+  somente na referência.
+- A V2.12 perdeu Precision agregada. As maiores regressões ocorreram nos casos
+  09, 11 e 14.
+- O caso 11 foi a maior regressão de F1 e confirmou que a ação principal no
+  checkout e sua recuperação são mais importantes do que novas regras numéricas.
+- O caso 14 manteve o mesmo F1 da V2.9 mesmo reprovando quatro checks do gate;
+  isso confirma que o gate manual não pode ser tratado como substituto direto do
+  judge oficial.
+- A próxima versão não deve ser escolhida somente pelo gate de proibições. O
+  preflight precisa medir cobertura e usar judges diagnósticos de forma controlada.
+
+Artefatos temporários:
+
+- /tmp/judge_v212_existing_outputs.py
+- /tmp/v212-diagnostic-judgments-e7517aa9.jsonl
+- /tmp/v212-diagnostic-judgments-e7517aa9-summary.json
+
+======================================================================
+17. V2.13 — CONTRASTE DE COBERTURA NO EXEMPLO 4
+======================================================================
+
+Data: 2026-08-25
+Tipo: MICRO-PREFLIGHT PARCIAL, 7 gerações e gate determinístico
+Modelo gerador: gpt-4o-mini, temperature=0
+Prompt publicado: bug_to_user_story_v2:64ee4d16
+Commit imutável: 64ee4d16c619a1cc832c329b35deb326d9a5ebc221119913eef1a6d390efb4d2
+URL: https://smith.langchain.com/prompts/bug_to_user_story_v2/64ee4d16?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: REPROVADO NO GATE; nenhum judge executado
+
+Intervenção:
+
+- A versão foi alterada de v2.12 para v2.13.
+- Somente o Exemplo 4 recebeu um contraste entre trecho incompleto e saída completa.
+- A política de recomendações, o contrato de saída e os demais exemplos permaneceram
+  inalterados.
+
+Validação local antes da publicação:
+
+- YAML válido e placeholder `{bug_report}` único.
+- Quatro entradas few-shot.
+- Seis testes obrigatórios aprovados.
+- `src/evaluate.py`, `src/metrics.py`, `src/utils.py`, dataset, V1 e
+  `requirements.txt` idênticos a `origin/main`.
+
+Geração:
+
+- Casos: 06, 07, 09, 11, 12, 14 e 15.
+- Respostas válidas: 7/7.
+- Respostas vazias: 0.
+- Erros de provider, parsing ou rate limit: 0.
+
+Falhas do gate:
+
+- Caso 06: omitiu HTTP 200 e comunicação à parte afetada.
+- Caso 09: omitiu subtotal de R$ 1.500 e desconto derivado de R$ 150.
+- Caso 11: usou adicionar ao carrinho como ação principal, embora a Story fosse
+  finalizar a compra.
+- Caso 12: não transferiu foco nem operação por teclado do contraste.
+- Caso 14: promoveu 95%, 100% e 5 minutos, valores observados na falha, para
+  critérios de sucesso.
+
+Conclusão:
+
+- O contraste do Exemplo 4 não transferiu os efeitos-alvo para os casos 06 e 12.
+- A hipótese foi refutada antes dos julgamentos diagnósticos.
+- Conforme o gate pré-acordado, os 21 judges não foram executados e não há notas
+  F1, Clarity ou Precision para a V2.13.
+- A próxima variante não deve ser escolhida pela simples presença de seções; deve
+  atacar a execução inconsistente das regras de cobertura e proveniência já
+  existentes.
+
+Artefatos temporários:
+
+- /tmp/v213_micro_preflight_64ee4d16.py
+- /tmp/v213-micro-preflight-64ee4d16.jsonl
+- /tmp/gate_v213_micro_preflight.py
+- /tmp/v213-micro-preflight-64ee4d16-summary.json
+
+======================================================================
+18. V2.14 — REGRAS OPERACIONAIS RECENTES E DEDUPLICADAS
+======================================================================
+
+Data: 2026-08-25
+Tipo: MICRO-PREFLIGHT PARCIAL, 7 gerações e gate determinístico
+Modelo gerador: gpt-4o-mini, temperature=0
+Prompt publicado: bug_to_user_story_v2:833cadd7
+Commit imutável: 833cadd7eb967628c39bd0fd2c2c88798105422671bbff7307453f419e3de630
+URL: https://smith.langchain.com/prompts/bug_to_user_story_v2/833cadd7?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Status: REPROVADO NO GATE; nenhum judge executado
+
+Intervenção:
+
+- As regras de proveniência numérica, operação e cobertura foram removidas do
+  início do `system_prompt`.
+- A matriz silenciosa foi removida do `user_prompt`.
+- O mesmo conteúdo operacional foi concentrado depois de `</relato>`, criando uma
+  única fonte recente de regras.
+- Contrato, quatro exemplos, fallback e política de recomendações foram mantidos.
+
+Validação local antes da publicação:
+
+- YAML válido e placeholder `{bug_report}` único.
+- Quatro entradas few-shot preservadas.
+- Seis testes obrigatórios aprovados.
+- `src/evaluate.py`, `src/metrics.py`, `src/utils.py`, dataset, V1 e
+  `requirements.txt` idênticos a `origin/main`.
+
+Geração:
+
+- Casos: 06, 07, 09, 11, 12, 14 e 15.
+- Respostas válidas: 7/7.
+- Respostas vazias: 0.
+- Erros de provider, parsing ou rate limit: 0.
+
+Resultado por comportamento-alvo:
+
+- Caso 06: manteve rastreabilidade, mas continuou sem comunicação à parte afetada.
+- Caso 07: preservou a condição de mais de 1000 registros e não promoveu o timeout
+  observado a meta.
+- Caso 09: passou a derivar o subtotal de R$ 1.500, mas omitiu o desconto de
+  R$ 150 e promoveu o valor incorreto de R$ 1.400 a critério negativo.
+- Caso 11: continuou usando adicionar ao carrinho como ação do `Quando`, em vez da
+  tentativa de finalizar a compra.
+- Caso 12: continuou sem foco, teclado e fechamento do modal.
+- Caso 14: regrediu para quatro User Stories, inventou CPU abaixo de 80% e cache de
+  1 hora, além de promover o uso observado de 100% da CPU a critério.
+- Caso 15: preservou uma Story e a cobertura dos quatro temas principais.
+
+Conclusão:
+
+- A realocação produziu ganho local no subtotal do caso 09, mas não corrigiu as
+  omissões sistemáticas dos casos 06, 11 e 12.
+- O caso 14 apresentou regressões estruturais e factuais graves.
+- A hipótese de que recência e fonte única seriam suficientes foi refutada pelo
+  gate determinístico.
+- Conforme o gate pré-acordado, os 21 judges não foram executados e não há notas
+  F1, Clarity ou Precision para a V2.14.
+
+Artefatos temporários:
+
+- /tmp/v214_micro_preflight_833cadd7.py
+- /tmp/v214-micro-preflight-833cadd7.jsonl
+- /tmp/gate_v214_micro_preflight.py
+- /tmp/v214-micro-preflight-833cadd7-summary.json
+
+======================================================================
+19. V2.15 — NÚCLEO V2.6 COM SEIS FEW-SHOTS SINTÉTICOS
+======================================================================
+
+Data: 2026-08-25
+Tipo: AVALIAÇÃO COMPLETA, 15 gerações e 45 julgamentos válidos
+Modelo gerador: gpt-4o-mini, temperature=0
+Modelo avaliador: gpt-4o
+Prompt publicado: bug_to_user_story_v2:4e0344f4
+URL do prompt: https://smith.langchain.com/prompts/bug_to_user_story_v2/4e0344f4?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Projeto de traces: default (80d51d68-0deb-47ec-9d61-4e92aae11502)
+URL dos traces: https://smith.langchain.com/o/87471f1e-753c-43fd-8d74-b411321af089/projects/p/80d51d68-0deb-47ec-9d61-4e92aae11502
+Status: REPROVADO — F1 abaixo de 0.80
+
+Intervenção:
+
+- O núcleo do system prompt, o fallback e o user prompt foram preservados da
+  V2.6 publicada.
+- O bloco de exemplos foi substituído por seis few-shots sintéticos cobrindo
+  contagem dinâmica, integração/rastreabilidade, performance sem SLA, cálculo,
+  concorrência/recuperação e múltiplos problemas/acessibilidade.
+- Os exemplos foram validados contra sobreposição de entradas e números do
+  dataset.
+
+Resultado:
+
+- Helpfulness: 0.8487
+- Correctness: 0.8056
+- F1-Score: 0.7839
+- Clarity: 0.8700
+- Precision: 0.8273
+- Média geral: 0.8271
+
+Integridade da rodada:
+
+- Exemplos consolidados: 15/15.
+- Julgamentos consolidados: 45/45.
+- Respostas vazias: 0.
+- Erros de provider, parsing ou rate limit: 0.
+- O resultado não foi aprovado porque F1 ficou 0.0161 abaixo da meta formal.
+
+Principais feedbacks dos judges:
+
+- Controle de acesso: omitiu o acesso do usuário aos próprios dados, o acesso
+  administrativo completo e o registro de auditoria; F1 0.6462.
+- Performance do relatório: tratou o timeout observado de 120 segundos como
+  critério de sucesso e omitiu desempenho consistente no horário de pico;
+  F1 0.6462 e Precision 0.6700.
+- Webhook: omitiu email de confirmação e log de auditoria; F1 0.7467.
+- Safari: omitiu qualidade e tempo de carregamento e acrescentou mensagem de
+  erro não sustentada; F1 0.8000 e Precision 0.8000.
+- Os relatos complexos tiveram F1 0.8000, 0.8000 e 0.8471, enquanto dois casos
+  simples alcançaram F1 1.0000.
+
+Observação operacional:
+
+- Após seis exemplos concluídos, o runner efêmero interrompeu a execução porque
+  seu detector local confundiu a expressão legítima "erro atual" com falha de
+  parsing. O detector foi corrigido e a rodada retomada no exemplo 7.
+- Uma geração e um julgamento F1 extras aparecem nos traces por causa dessa
+  interrupção, mas não entram nas 15 gerações e 45 julgamentos consolidados.
+- Nenhum arquivo protegido foi alterado para executar ou validar a avaliação.
+
+Conclusão:
+
+- A V2.15 elevou Clarity, Precision, Helpfulness, Correctness e média geral acima
+  de 0.80, mas não resolveu completamente o recall exigido pelo judge de F1.
+- A próxima iteração deve atacar omissões específicas e a promoção de valores
+  observados na falha para critérios de sucesso, sem aumentar globalmente a
+  verbosidade do prompt.
+
+======================================================================
+20. V2.16 — COBERTURA VERIFICÁVEL E PERFORMANCE COM PROVENIÊNCIA
+======================================================================
+
+Data: 2026-08-25
+Tipo: AVALIAÇÃO COMPLETA, 15 gerações e 45 julgamentos válidos
+Modelo gerador: gpt-4o-mini, temperature=0
+Modelo avaliador: gpt-4o, temperature=0
+Prompt publicado: bug_to_user_story_v2:25a8c108
+URL do prompt: https://smith.langchain.com/prompts/bug_to_user_story_v2/25a8c108?organizationId=87471f1e-753c-43fd-8d74-b411321af089
+Projeto de traces: v216-official-20260825 (82819c3e-bac5-4784-b684-6ac874252721)
+URL dos traces: https://smith.langchain.com/o/87471f1e-753c-43fd-8d74-b411321af089/projects/p/82819c3e-bac5-4784-b684-6ac874252721
+Status: APROVADO — todas as métricas e a média geral >= 0.80
+
+Intervenção:
+
+- O exemplo de contagem foi substituído por uma autorização sintética que cobre
+  acesso próprio, terceiro bloqueado, acesso administrativo e auditoria.
+- O exemplo de performance passou a separar um timeout sintético observado de
+  84 segundos de uma meta proposta inferior a 21 segundos.
+- A matriz esclarece que HTTP 403/200 só é obrigatório em interfaces HTTP.
+- O checklist final passou a auditar cobertura de integração, autorização,
+  performance e ações terminais.
+
+Resultado:
+
+- Helpfulness: 0.8720
+- Correctness: 0.8363
+- F1-Score: 0.8053
+- Clarity: 0.8767
+- Precision: 0.8673
+- Média geral: 0.8515
+
+Variação contra V2.15:
+
+- Helpfulness: +0.0233
+- Correctness: +0.0307
+- F1-Score: +0.0214
+- Clarity: +0.0067
+- Precision: +0.0400
+- Média geral: +0.0244
+
+Integridade da rodada:
+
+- Exemplos: 15/15.
+- Julgamentos: 45/45.
+- Traces raiz: 60, sendo 15 RunnableSequence e 45 ChatOpenAI.
+- Respostas vazias: 0.
+- Erros de provider, parsing ou rate limit: 0.
+- O prompt publicado foi confirmado como idêntico ao YAML local antes da rodada.
+- Avaliadores, utilitários e dataset permaneceram idênticos a origin/main.
+
+Efeito nos casos-alvo:
+
+- Performance: F1 0.6462 -> 0.9000 e Precision 0.6700 -> 0.9000. A resposta
+  passou a usar a meta de 30 segundos e deixou de promover o timeout observado.
+- Autorização: F1 0.6462 -> 0.7467, mas Precision 0.8000 -> 0.6700. Ainda houve
+  omissão do caminho administrativo e da auditoria na geração avaliada.
+- Estoque: F1 0.6857 -> 0.6462, enquanto Precision 0.6700 -> 0.9000. Persistiram
+  omissões de recuperação e reserva temporária.
+- Webhook: F1 0.7467 -> 0.7000; a comunicação ao cliente continuou ausente.
+
+Conclusão:
+
+- A demonstração numérica concreta foi a mudança de maior efeito causal observado.
+- A V2.16 atingiu o critério formal do desafio, embora o F1 de 0.8053 ainda tenha
+  margem pequena e permaneça abaixo da meta interna conservadora de 0.82.
+- O resultado deve ser preservado como baseline aprovado; novas iterações são
+  opcionais e não devem substituir este commit sem uma rodada completa superior.

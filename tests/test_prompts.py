@@ -100,38 +100,5 @@ class TestPrompts:
         assert found_techniques.intersection(expected_techniques), \
             f"Expected at least one of {expected_techniques}, found {techniques}"
 
-    def test_prompt_uses_one_stable_format_without_criteria_quotas(self):
-        """Garante formato único e critérios guiados pelo relato, não por cotas."""
-        forbidden_instructions = [
-            "FORMAT SELECTION",
-            "SIMPLE BUGS",
-            "COMPLEX BUGS",
-            "3-5 criteria",
-            "5-7",
-            "7+",
-        ]
-
-        for instruction in forbidden_instructions:
-            assert instruction not in self.system_prompt, \
-                f"Found contradictory or quota-based instruction: {instruction}"
-
-    def test_prompt_examples_demonstrate_three_complexity_levels(self):
-        """Valida exemplos em português para casos simples, técnicos e múltiplos."""
-        assert self.system_prompt.count("**Entrada:**") >= 3
-        assert self.system_prompt.count("**Saída:**") >= 3
-
-    def test_prompt_defines_fact_grounding_policy(self):
-        """Exige regras explícitas contra detalhes e soluções não informados."""
-        prompt_lower = self.system_prompt.lower()
-        assert "fonte de verdade" in prompt_lower
-        assert "não invente" in prompt_lower
-        assert "soluç" in prompt_lower and "técnic" in prompt_lower
-
-    def test_prompt_fallback_is_fully_in_portuguese(self):
-        """Evita instruções em inglês no fallback exibido ao usuário."""
-        assert "Não foi possível criar uma User Story válida." in self.system_prompt
-        assert "Clarify" not in self.system_prompt
-        assert "Provide affected" not in self.system_prompt
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

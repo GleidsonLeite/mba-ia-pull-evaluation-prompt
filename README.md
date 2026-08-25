@@ -337,116 +337,93 @@ python src/evaluate.py
 
 ---
 
-## Implementação V2.1
+## Implementação V2.16
 
-A V2.1 substitui o conteúdo da V2, mas mantém o identificador
-`bug_to_user_story_v2` e o mesmo nome versionado no LangSmith Hub. O objetivo é
-melhorar precisão, completude e clareza sem introduzir outro formato de saída.
+A V2.16 mantém o identificador `bug_to_user_story_v2` e altera somente o
+conteúdo do prompt otimizado. Os arquivos de avaliação, métricas, utilitários e o
+dataset permanecem idênticos aos fornecidos pelo repositório base.
 
 ### Técnicas Aplicadas (Fase 2)
 
-1. **Role Prompting**: o modelo atua como Senior Product Manager responsável por
-   converter o relato em uma User Story utilizável por produto, desenvolvimento e
-   QA. O papel foi reduzido ao necessário para evitar instruções decorativas.
-2. **Few-shot Learning**: três pares de entrada e saída demonstram o mesmo formato
-   para um bug simples, um bug técnico e um relato com vários problemas. Os
-   exemplos também demonstram o que não deve ser inventado.
-3. **Chain of Thought interno**: uma verificação silenciosa confere cobertura,
-   rastreabilidade e formato antes da resposta. O raciocínio não é exibido; somente
-   a User Story final é retornada.
-4. **Restrições e delimitadores**: o relato é declarado como única fonte de verdade,
-   e o formato Markdown delimita exatamente a resposta esperada.
+1. **Role Prompting**: o modelo atua como Senior Product Manager com experiência
+   em QA e refinamento de backlog.
+2. **Few-shot Learning**: seis exemplos sintéticos demonstram autorização,
+   integração, performance, cálculo, concorrência e múltiplos problemas. Nenhum
+   exemplo foi copiado do dataset de avaliação.
+3. **Chain of Thought interno**: o modelo identifica persona, fatos, evidências e
+   quantidade de problemas antes de responder, mas não exibe o raciocínio.
+4. **Skeleton of Thought**: três esqueletos de saída controlam a profundidade sem
+   misturar comportamento observável, contexto e recomendações técnicas.
+5. **Structured Output**: User Story e critérios seguem um contrato em português,
+   com Dado–Quando–Então e seções adicionais somente quando justificadas.
 
-### Decisões da V2.1
+### Contrato de saída
 
-- Há uma única estrutura: User Story seguida de Critérios de Aceitação em
-  Dado–Quando–Então. Relatos com vários problemas usam subtítulos dentro da mesma
-  seção, sem trocar o tipo de documento.
-- A quantidade de cenários é determinada pelos comportamentos relatados. Foram
-  removidas cotas como “3–5”, “5–7” e “7+”, que incentivavam preenchimento e
-  alucinações.
-- Números, endpoints, logs, ambientes, versões, passos e impactos devem ser
-  preservados. Persona e benefício podem usar apenas a derivação mínima exigida
-  pela User Story.
-- Mensagens, limites, telas, edge cases e soluções técnicas não informados não são
-  adicionados.
-- O fallback para entradas vazias ou insuficientes está integralmente em português.
+| Nível | Quando usar | Saída |
+| --- | --- | --- |
+| 1 | Um sintoma simples | User Story e critérios de aceitação |
+| 2 | Um problema com passos, logs, números ou impacto | User Story, critérios, bloco temático opcional e contexto |
+| 3 | Dois ou mais problemas independentes | Story principal, critérios por tema, contexto, critérios e tarefas técnicas |
 
-### Resultados e aprendizados
+O nível é escolhido pela quantidade de problemas e pela densidade factual, não
+apenas pelo tamanho do texto. A meta aproximada é de cinco critérios distintos
+por comportamento, sem repetição para preencher quantidade.
 
-Os resultados abaixo são o benchmark informado para as versões anteriores. A V3
-atingiu limites de requisição da OpenAI durante a avaliação; portanto, suas notas
-incluem falhas de infraestrutura e não representam uma comparação limpa.
+### Precisão e enriquecimento controlado
 
-| Métrica | V2 | V3 | Variação observada |
-| --- | ---: | ---: | ---: |
-| Helpfulness | 0.76 | 0.73 | -0.03 |
-| Correctness | 0.69 | 0.67 | -0.02 |
-| F1-Score | 0.63 | 0.65 | +0.02 |
-| Clarity | 0.78 | 0.77 | -0.01 |
-| Precision | 0.74 | 0.68 | -0.06 |
-| **Média** | **0.7214** | **0.6995** | **-0.0219** |
+O relato continua sendo a fonte de verdade para números, endpoints, erros, logs,
+ambientes, passos, SLAs e impactos. O prompt admite consequências funcionais
+diretas e convenções técnicas consolidadas somente quando ligadas à causa
+relatada. Recomendações ficam separadas em seções técnicas e não são apresentadas
+como fatos observados.
 
-A V2.1 foi avaliada em uma execução completa, sem falhas de geração ou de
-avaliação:
+Quando existe SLA, ele é preservado literalmente. Sem SLA, uma meta melhor que o
+comportamento defeituoso só pode aparecer identificada como proposta. Tecnologias,
+regras de negócio, telas, mensagens literais e cargos específicos não informados
+não devem ser inventados.
 
-| Métrica | V2 | V2.1 | Variação |
-| --- | ---: | ---: | ---: |
-| Helpfulness | 0.76 | 0.76 | 0.00 |
-| Correctness | 0.69 | 0.69 | 0.00 |
-| F1-Score | 0.63 | 0.65 | +0.02 |
-| Clarity | 0.78 | 0.79 | +0.01 |
-| Precision | 0.74 | 0.74 | 0.00 |
-| **Média** | **0.7214** | **0.7271** | **+0.0057** |
+### Resultados Finais
 
-O ganho foi pequeno e a V2.1 ainda não atingiu o critério mínimo de `0.80`.
-Esse resultado não deve ser apresentado como aprovado; ele confirma apenas uma
-melhoria marginal em uma execução tecnicamente válida.
+A V2.16 foi avaliada com os 15 exemplos do dataset, usando `gpt-4o-mini` para
+geração e `gpt-4o` para os 45 julgamentos. A rodada terminou sem respostas vazias,
+erros de parsing, rate limits ou falhas do provider.
 
-Principais aprendizados:
+| Métrica | V2 original | V2.16 |
+| --- | ---: | ---: |
+| Helpfulness | 0.7600 | **0.8720** |
+| Correctness | 0.6900 | **0.8363** |
+| F1-Score | 0.6300 | **0.8053** |
+| Clarity | 0.7800 | **0.8767** |
+| Precision | 0.7400 | **0.8673** |
+| Média geral | 0.7214 | **0.8515** |
 
-- O formato adaptativo da V3 aumentou a variabilidade sem elevar a qualidade.
-- O exemplo complexo da V3 contradizia a regra de fidelidade ao acrescentar fatos,
-  limites e soluções ausentes da entrada.
-- Repetição de instruções e cotas de critérios não garantem completude; cenários
-  ligados a fatos explícitos produzem uma resposta mais precisa.
-- Falhas do provedor não podem ser convertidas em nota zero nem removidas
-  silenciosamente da média.
+Status: **APROVADO — todas as métricas e a média geral são maiores ou iguais a 0.80.**
 
-A meta permanece: todas as cinco métricas e a média geral devem ser maiores ou
-iguais a `0.80`.
+Evidências:
 
-### Avaliação confiável
+- [Prompt V2.16 no Prompt Hub](https://smith.langchain.com/prompts/bug_to_user_story_v2/25a8c108?organizationId=87471f1e-753c-43fd-8d74-b411321af089)
+- [Projeto LangSmith com 15 gerações e 45 julgamentos](https://smith.langchain.com/o/87471f1e-753c-43fd-8d74-b411321af089/projects/p/82819c3e-bac5-4784-b684-6ac874252721)
+- Commit imutável do prompt: `25a8c108`
 
-Cada geração e cada métrica base retorna um status explícito. Falhas transitórias
-são repetidas com backoff exponencial, usando quatro tentativas por padrão. Se uma
-geração ou métrica continuar falhando, a execução é marcada como incompleta, não
-calcula médias e termina com código diferente de zero.
+O projeto LangSmith contém exatamente 60 traces raiz: 15 execuções do prompt e
+45 chamadas do avaliador. A visibilidade pública dos links depende da configuração
+de compartilhamento e da criação de um handle público na conta LangSmith.
 
-As variáveis relevantes são:
+### Como Executar
 
-```dotenv
-PROMPT_VERSION=v2
-EVALUATION_MAX_ATTEMPTS=4
-```
-
-### Como executar a V2.1
+Primeiro valide localmente:
 
 ```bash
-# 1. Ativar o ambiente virtual e instalar dependências
-source venv/bin/activate
-pip install -r requirements.txt
-
-# 2. Validar o prompt e a confiabilidade do avaliador
-pytest -q
-
-# 3. Publicar a V2.1 no identificador V2 do LangSmith Hub
-python src/push_prompts.py
-
-# 4. Avaliar os 15 exemplos
-PROMPT_VERSION=v2 python src/evaluate.py
+pytest tests/test_prompts.py -q
 ```
 
-Uma execução só é válida quando apresenta resultados para os 15 exemplos e para
-F1-Score, Clarity e Precision em cada exemplo. Helpfulness e Correctness são
-derivadas apenas depois dessa validação.
+Depois de cada revisão do prompt, publique e avalie com os scripts originais:
+
+```bash
+python src/push_prompts.py
+python src/evaluate.py
+```
+
+A execução só deve ser considerada válida se processar os 15 exemplos sem erros
+ou rate limits e se Helpfulness, Correctness, F1-Score, Clarity, Precision e a
+média geral forem maiores ou iguais a `0.80`.

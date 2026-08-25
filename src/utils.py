@@ -137,30 +137,7 @@ def validate_prompt_structure(prompt_data: Dict[str, Any]) -> tuple[bool, list]:
     if not system_prompt:
         errors.append("system_prompt está vazio")
 
-    # Check for unresolved TODOs, but allow TODO references in Negative Instructions
-    # (where it's instructing the model NOT to do something)
-    prompt_lines = system_prompt.split('\n')
-    in_negative_instructions = False
-    has_unresolved_todo = False
-
-    for line in prompt_lines:
-        if "## Negative Instructions" in line:
-            in_negative_instructions = True
-        elif line.startswith("##") and "## Negative Instructions" not in line:
-            in_negative_instructions = False
-
-        # Skip checks in Negative Instructions section
-        if in_negative_instructions and "## Negative Instructions" not in line:
-            continue
-
-        # Check for unresolved [TODO] markers outside of Negative Instructions
-        if "[TODO]" in line or (line.strip().startswith("TODO") and not any(
-            marker in line for marker in ["Do not", "Do NOT", "Never", "Avoid", "Do NOT output"]
-        )):
-            has_unresolved_todo = True
-            break
-
-    if has_unresolved_todo:
+    if 'TODO' in system_prompt:
         errors.append("system_prompt ainda contém TODOs")
 
     techniques = prompt_data.get('techniques_applied', [])
